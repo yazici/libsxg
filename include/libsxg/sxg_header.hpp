@@ -20,6 +20,7 @@
 #include <cstdint>
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 namespace sxg {
 
@@ -31,6 +32,19 @@ public:
   void Merge(const Header& from);
   size_t Size() const {
     return header_.size();
+  }
+  std::vector<std::string> Keys() const;
+
+  // This function assumes that specified key must exists in headers_.
+  const std::vector<std::string>& Get(std::string key) const {
+    auto it = header_.find(key);
+    return it->second;
+  }
+
+  std::string SerializeInCbor() const;
+
+  bool operator==(const Header& rhs) const {
+    return header_ == rhs.header_;
   }
 
 private:

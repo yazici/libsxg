@@ -58,6 +58,7 @@ add_library(sxg
   src/sxg_raw_response.c
   src/sxg_encoded_response.c
   src/sxg_header.c
+  src/sxg_header.cpp
   src/sxg_sig.c
   src/sxg_signer_list.c
 )
@@ -147,9 +148,12 @@ if (NOT SKIP_TEST)
   )
   set (GTEST_INCLUDE ${PROJECT_BINARY_DIR}/third_party/gtest/googletest/include)
 
-  add_library(test_util
+  add_library(
+    test_util
     SHARED
-    tests/test_util.cc)
+      tests/test_util.cc
+  )
+
   target_include_directories(
     test_util
     PRIVATE
@@ -164,11 +168,20 @@ if (NOT SKIP_TEST)
       libgtest_main
       pthread
       sxg
-      ${OPENSSL_LIBRARIES}
-  )
+      ${OPENSSL_LIBRARIES})
 endif ()
 
-macro (add_test_macro target_name test_name)
+set (SANITIZER_OPTIONS "-fsanitize=address,leak,undefined")
+macro (add_test_macro test_name use_sanitizer cpp_mode)
+  set(target_name ${test_name})
+  if (use_sanitizer)
+    set(target_name ${target_name}_sanitizer)
+  endif ()
+  if (cpp_mode)
+    add_executable (${target_name}_cc tests/cpp/${test_name}.cc)
+  else ()
+    add_executable (${target_name} tests/${test_name}.cc)
+  endif ()
   add_executable (${target_name} tests/${test_name}.cc)
   add_test(
     NAME ${target_name}
@@ -184,6 +197,14 @@ macro (add_test_macro target_name test_name)
       sxg
       test_util
       ${OPENSSL_LIBRARIES})
+  if (use_sanitizer)
+    target_link_options(
+      ${target_name}
+      PRIVATE
+        ${SANITIZER_OPTIONS}
+    )
+  endif ()
+
   target_include_directories(
     ${target_name}
     PRIVATE
@@ -196,27 +217,32 @@ function (add_plain_test test_name)
   add_test_macro (${test_name} ${test_name})
 endfunction ()
 
-set (SANITIZER_OPTIONS "-fsanitize=address,leak,undefined")
 function (add_sanitizer_test test_name)
   add_test_macro ("${test_name}_sanitizer" ${test_name})
 endfunction ()
 
-function (configure_test test_name)
-  message ("-- Configuring test: ${test_name}")
-  add_plain_test (${test_name})
-  add_sanitizer_test (${test_name})
+function (configure_test test_name cpp_mode)
+  if (cpp_mode)
+    message ("-- Configuring C++ test: ${test_name}")
+  else ()
+    message ("-- Configuring test: ${test_name}")
+  endif ()
+  add_plain_test (${test_name} ${cpp_mode})
+  add_sanitizer_test (${test_name} ${cpp_mode})
 endfunction ()
 
 if (NOT SKIP_TEST)
-  configure_test (nfail_malloc_test)
-  configure_test (sxg_buffer_test)
-  configure_test (sxg_codec_test)
-  configure_test (sxg_encoded_response_test)
-  configure_test (sxg_generate_test)
-  configure_test (sxg_header_test)
-  configure_test (sxg_sig_test)
-  configure_test (sxg_signer_list_test)
-  configure_test (toplevel_test)
+  configure_test (sxg_buffer_test false)
+  configure_test (sxg_codec_test false)
+  configure_test (sxg_header_test false)
+  configure_test (sxg_sig_test false)
+  configure_test (sxg_encoded_response_test false)
+  configure_test (sxg_signer_list_test false)
+  configure_test (toplevel_test false)
+  configure_test (sxg_generate_test false)
+  configure_test (nfail_malloc_test false)
+
+  configure_test (sxg_header_test true)
 endif ()
 
 

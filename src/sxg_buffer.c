@@ -136,15 +136,22 @@ bool sxg_write_bytes_cbor(const uint8_t* bytes, size_t length,
          sxg_write_bytes(bytes, length, target);
 }
 
+// Write serialized int assume there is enough memory.
+void sxg_serialize_int(uint64_t num, int nbytes, uint8_t* dest) {
+  size_t pos = 0;
+  for (int i = nbytes - 1; i >= 0; --i) {
+    dest[pos++] = (num >> (8 * i)) & 0xff;
+  }
+}
+
 bool sxg_write_int(uint64_t num, int nbytes, sxg_buffer_t* target) {
   assert(1 <= nbytes && nbytes <= 8);
 
   if (!ensure_free_capacity(nbytes, target)) {
     return false;
   }
-  for (int i = nbytes - 1; i >= 0; --i) {
-    target->data[target->size++] = (num >> (8 * i)) & 0xff;
-  }
+  sxg_serialize_int(num, nbytes, target->data + target->size);
+  target->size += nbytes;
   return true;
 }
 
