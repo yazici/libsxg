@@ -57,8 +57,9 @@ add_library(sxg
   src/sxg_generate.c
   src/sxg_raw_response.c
   src/sxg_encoded_response.c
+  src/sxg_encoded_response.cc
   src/sxg_header.c
-  src/sxg_header.cpp
+  src/sxg_header.cc
   src/sxg_sig.c
   src/sxg_signer_list.c
 )
@@ -243,6 +244,7 @@ if (NOT SKIP_TEST)
   configure_test (nfail_malloc_test false)
 
   configure_test (sxg_header_test true)
+  configure_test (sxg_encoded_response_test true)
 endif ()
 
 

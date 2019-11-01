@@ -34,7 +34,18 @@ public:
 
   std::string GetHeaderIntegrity() const;
 
-private:
+  size_t HeaderSize() const {
+    return header_.Size();
+  }
+
+  const sxg::Header& GetHeader() const {
+    return header_;
+  }
+  const std::string& GetPayload() const {
+    return payload_;
+  }
+
+ private:
   Header header_;
   std::string payload_;
 };

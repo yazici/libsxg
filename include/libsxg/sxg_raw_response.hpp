@@ -27,7 +27,7 @@ struct RawResponse {
   ~RawResponse() {}
 
   // These members are intentionally public.
-  sxg_header_t header;
+  sxg::Header header;
   std::string payload;
 };
 

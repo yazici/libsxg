@@ -21,9 +21,13 @@
 #include <openssl/x509.h>
 #include <string.h>
 
+bool sxg_sha256(const uint8_t* data, size_t size, uint8_t* out) {
+  return SHA256(data, size, out) != NULL;
+}
+
 static bool sxg_calc_sha256_bytes(const sxg_buffer_t* src,
                                   uint8_t out[SHA256_DIGEST_LENGTH]) {
-  return SHA256(src->data, src->size, out) != NULL;
+  return sxg_sha256(src->data, src->size, out);
 }
 
 bool sxg_calc_sha256(const sxg_buffer_t* src, sxg_buffer_t* dst) {
@@ -38,8 +42,11 @@ bool sxg_calc_sha384(const sxg_buffer_t* src, sxg_buffer_t* dst) {
          SHA384(src->data, src->size, dst->data);
 }
 
-bool sxg_base64encode_bytes(const uint8_t* src, size_t length,
-                            sxg_buffer_t* dst) {
+size_t sxg_estimated_base64_size(const size_t size) {
+  return 4 * ((size + 2) / 3);
+}
+
+void sxg_base64encode_write(const uint8_t* src, size_t length, char* target) {
   BUF_MEM* bptr;
   BIO* base64 = BIO_new(BIO_f_base64());
   if (base64 == NULL) {
@@ -54,10 +61,24 @@ bool sxg_base64encode_bytes(const uint8_t* src, size_t length,
   BIO_set_flags(base64, BIO_FLAGS_BASE64_NO_NL);  // We don't need following \n.
 
   bool success = BIO_write(base64, src, length) > 0 && BIO_flush(base64) > 0 &&
-                 BIO_get_mem_ptr(base64, &bptr) > 0 &&
-                 sxg_write_bytes((const uint8_t*)bptr->data, bptr->length, dst);
+                 BIO_get_mem_ptr(base64, &bptr) > 0;
+  if (success) {
+    memcpy(target, (const uint8_t*)bptr->data, bptr->length);
+  }
+
   BIO_free_all(base64);
   return success;
+}
+
+bool sxg_base64encode_bytes(const uint8_t* src, size_t length,
+                            sxg_buffer_t* dst) {
+  size_t required_size = sxg_estimated_base64_size(length);
+  if (!ensure_buffer_free_capacity(required_size, dst)) {
+    return false;
+  }
+  sxg_base64encode_write(src, length, dst->data + dst->size);
+  dst->size += required_size;
+  return true;
 }
 
 bool sxg_base64encode(const sxg_buffer_t* src, sxg_buffer_t* dst) {

@@ -26,10 +26,11 @@ namespace sxg {
 
 // Innner HTTP headers of SXG.
 class Header {
-public:
+ public:
   void Append(std::string key, std::string value);
   void Append(std::string key, uint64_t num);
   void Merge(const Header& from);
+
   size_t Size() const {
     return header_.size();
   }
@@ -47,7 +48,10 @@ public:
     return header_ == rhs.header_;
   }
 
-private:
+ private:
+  size_t GetCborSerializedSize() const;
+
+ private:
   std::unordered_map<std::string, std::vector<std::string>> header_;
 };
 

@@ -171,22 +171,22 @@ static int header_encoding_order(const void* a, const void* b) {
 }
 
 // It returns cbor header size for map.
-size_t sxg_expected_cbor_header_serialized_size(size_t size) {
+size_t sxg_cbor_map_header_serialized_size(size_t size) {
   // https://tools.ietf.org/html/rfc7049#appendix-B
   if (size <= 0x17) {
-    return 0;
-  } else if (size <= 0xff) {
     return 1;
-  } else if (size <= 0xffff) {
+  } else if (size <= 0xff) {
     return 2;
+  } else if (size <= 0xffff) {
+    return 3;
   } else if (size <= 0xffffffff) {
-    return 4;
+    return 5;
   } else {
-    return 8;
+    return 9;
   }
 }
 
-uint8_t sxg_cbor_map_header(size_t size) {
+uint8_t sxg_cbor_map_header_prefix(size_t size) {
   if (size <= 0x17) {
     return 0xa0 + size;
   } else if (size <= 0xff) {
@@ -203,14 +203,15 @@ uint8_t sxg_cbor_map_header(size_t size) {
 bool sxg_write_cbor_map_header(size_t size, sxg_buffer_t* target) {
   // https://tools.ietf.org/html/rfc7049#appendix-B
   // It writes cbor header for map.
-  const size_t header_byte_size = sxg_expected_cbor_header_serialized_size(size);
-  const uint8_t map_header = sxg_cbor_map_header(size);
-  if (!ensure_free_capacity(header_byte_size + 1, target)) {
+  const size_t header_byte_size = sxg_cbor_map_header_serialized_size(size);
+  const uint8_t prefix = sxg_cbor_map_header_prefix(size);
+  if (!ensure_buffer_free_capacity(header_byte_size, target)) {
     return false;
   }
-  sxg_serialize_int(map_header, 1, target->data);
-  sxg_serialize_int(size, header_byte_size, target->data + 1);
-  target->size += header_byte_size + 1;
+  uint8_t* buffer = target->data + target->size;
+  sxg_serialize_int(prefix, 1, buffer);
+  sxg_serialize_int(size, header_byte_size - 1, buffer + 1);
+  target->size += header_byte_size;
   return true;
 }
 

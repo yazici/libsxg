@@ -14,6 +14,7 @@
 //
 ///////////////////////////////////////////////////////////////////////////////
 
+#include "libsxg/sxg_raw_response.hpp"
 #include "libsxg/sxg_encoded_response.hpp"
 
 #include "libsxg/internal/sxg_codec.h"
@@ -21,23 +22,20 @@
 
 namespace sxg {
 
-EncodedResponse Encode(const size_t mi_record_size,
-                       const RawResponse& src) {
+EncodedResponse EncodedResponse::Encode(const size_t mi_record_size,
+                                        const RawResponse& src) {
   sxg_buffer_t digest_value = sxg_empty_buffer();
   uint8_t digest[SHA256_DIGEST_LENGTH];
   EncodedResponse result;
-  result.header_ = src.header_;
+  result.header_ = src.header;
   result.header_.Append("content-encoding", "mi-sha-256-03");
   result.header_.Append(":status", "200");
   result.header_.Append("digest", "mi-sha256-03=");
 
-  bool success =
-      sxg_header_copy(&src->header, &dst->header) &&
-      sxg_encode_mi_sha256(&src->payload, mi_record_size, &dst->payload,
-                           digest) &&
-      sxg_header_append_string("content-encoding", "mi-sha256-03",
-                               &dst->header) &&
-      sxg_write_string("mi-sha256-03=", &digest_value) &&
+  sxg_encode_mi_sha256(&src->payload, mi_record_size, &dst->payload,
+                       digest);
+  result.Append("content-encoding", "mi-sha256-03");
+  sxg_write_string("mi-sha256-03=", &digest_value) &&
       sxg_base64encode_bytes(digest, SHA256_DIGEST_LENGTH, &digest_value) &&
       sxg_header_append_buffer("digest", &digest_value, &dst->header);
 
@@ -48,18 +46,12 @@ EncodedResponse Encode(const size_t mi_record_size,
   return success;
 }
 
-bool sxg_write_header_integrity(const sxg_encoded_response_t* src,
-                                sxg_buffer_t* dst) {
-  sxg_buffer_t cbor = sxg_empty_buffer();
-  sxg_buffer_t hashed = sxg_empty_buffer();
-
+std::string EncodedResponse::GetHeaderIntegrity() const {
+  std::string result = header_.SerializeInCbor();
   const bool success = sxg_header_serialize_cbor(&src->header, &cbor) &&
                        sxg_calc_sha256(&cbor, &hashed) &&
                        sxg_write_string("sha256-", dst) &&
                        sxg_base64encode(&hashed, dst);
-
-  sxg_buffer_release(&cbor);
-  sxg_buffer_release(&hashed);
   return success;
 }
 
