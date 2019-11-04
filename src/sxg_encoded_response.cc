@@ -32,8 +32,12 @@ EncodedResponse EncodedResponse::Encode(const size_t mi_record_size,
   result.header_.Append(":status", "200");
   result.header_.Append("digest", "mi-sha256-03=");
 
-  sxg_encode_mi_sha256(&src->payload, mi_record_size, &dst->payload,
-                       digest);
+  size_t encoded_size =
+      sxg_estimated_mi_sha256_size(src.payload.size, mi_record_size);
+  uint8_t proof[SHA256_DIGEST_LENGTH];
+  result.payload_.resize(encoded_size);
+  sxg_encode_mi_sha256_write(src.payload.data, src.payload.size, mi_record_size,
+                             &result.payload_[0], proof);
   result.Append("content-encoding", "mi-sha256-03");
   sxg_write_string("mi-sha256-03=", &digest_value) &&
       sxg_base64encode_bytes(digest, SHA256_DIGEST_LENGTH, &digest_value) &&

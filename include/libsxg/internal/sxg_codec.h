@@ -31,12 +31,27 @@ extern "C" {
 bool sxg_calc_sha256(const sxg_buffer_t* src, sxg_buffer_t* dst);
 bool sxg_calc_sha384(const sxg_buffer_t* src, sxg_buffer_t* dst);
 
+// Returns size of expected buffer length to input size.
+size_t sxg_estimated_base64_size(const size_t size);
+
+// Write memory
+bool sxg_base64encode_write(const uint8_t* src, size_t length, char* target);
+
 // Appends base64 of `src` to `dst`. Returns true on success.
 bool sxg_base64encode(const sxg_buffer_t* src, sxg_buffer_t* dst);
 
 // Appends base64 of byte array to `dst`. Returns true on success.
 bool sxg_base64encode_bytes(const uint8_t* src, size_t length,
                             sxg_buffer_t* dst);
+
+size_t sxg_estimated_mi_sha256_size(const size_t length,
+                                    const uint64_t record_size);
+
+size_t sxg_estimated_mi_sha256_remainder_size(size_t size,
+                                              uint64_t record_size);
+
+void sxg_encode_mi_sha256_write(const char* src, size_t size,
+                                uint64_t record_size, char* dst, char* proof);
 
 // Replaces `encoded` and `proof` with Merkle Integrity Content Encoding(MICE)
 // of `src`. Returns true on success.

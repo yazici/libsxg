@@ -25,6 +25,10 @@ bool sxg_sha256(const uint8_t* data, size_t size, uint8_t* out) {
   return SHA256(data, size, out) != NULL;
 }
 
+bool sxg_sha384(const uint8_t* data, size_t size, uint8_t* out) {
+  return SHA384(data, size, out) != NULL;
+}
+
 static bool sxg_calc_sha256_bytes(const sxg_buffer_t* src,
                                   uint8_t out[SHA256_DIGEST_LENGTH]) {
   return sxg_sha256(src->data, src->size, out);
@@ -39,14 +43,14 @@ bool sxg_calc_sha256(const sxg_buffer_t* src, sxg_buffer_t* dst) {
 bool sxg_calc_sha384(const sxg_buffer_t* src, sxg_buffer_t* dst) {
   sxg_buffer_release(dst);
   return sxg_buffer_resize(SHA384_DIGEST_LENGTH, dst) &&
-         SHA384(src->data, src->size, dst->data);
+         sxg_sha384(src->data, src->size, dst->data);
 }
 
 size_t sxg_estimated_base64_size(const size_t size) {
   return 4 * ((size + 2) / 3);
 }
 
-void sxg_base64encode_write(const uint8_t* src, size_t length, char* target) {
+bool sxg_base64encode_write(const uint8_t* src, size_t length, char* target) {
   BUF_MEM* bptr;
   BIO* base64 = BIO_new(BIO_f_base64());
   if (base64 == NULL) {
@@ -91,7 +95,7 @@ static void encode_uint64_to_buffer(uint64_t num, uint8_t buf[8]) {
   }
 }
 
-static size_t mi_sha256_encoded_size(size_t length, uint64_t record_size) {
+size_t sxg_esitmated_mi_sha256_size(size_t length, uint64_t record_size) {
   // See 2.1 of https://tools.ietf.org/html/draft-thomson-http-mice-03
   // Note:  This content encoding increases the size of a message by 8 plus
   // SHA256_DIGEST_LENGTH octets times the length of the message divided by the
@@ -106,7 +110,8 @@ static size_t mi_sha256_encoded_size(size_t length, uint64_t record_size) {
   }
 }
 
-static size_t mi_sha256_remainder_size(size_t size, uint64_t record_size) {
+size_t sxg_estimated_mi_sha256_remainder_size(size_t size,
+                                              uint64_t record_size) {
   // If contents size == 0 chunk length must be 0.
   if (size == 0) {
     return 0;
@@ -141,7 +146,8 @@ bool sxg_encode_mi_sha256(const sxg_buffer_t* src, uint64_t record_size,
   // Construct encoded buffer from tail to head of source buffer.
   const uint8_t* input_p = src->data + src->size;
   uint8_t* output_p = encoded->data + encoded_size;
-  const size_t remainder = mi_sha256_remainder_size(src->size, record_size);
+  const size_t remainder =
+    sxg_estimated_mi_sha256_remainder_size(src->size, record_size);
 
   sxg_buffer_t workspace = sxg_empty_buffer();
   if (!sxg_buffer_resize(remainder + 1, &workspace)) {
