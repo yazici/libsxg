@@ -17,6 +17,7 @@
 #ifndef LIBSXG_SXG_SIGNER_LIST_H_
 #define LIBSXG_SXG_SIGNER_LIST_H_
 
+#include <inttypes.h>
 #include <openssl/evp.h>
 #include <openssl/x509.h>
 

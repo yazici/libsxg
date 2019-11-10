@@ -44,7 +44,9 @@ sxg_signer_list_t MakeSignerList() {
       "my_signer", now, now + 60 * 60 * 24,
       "https://original.example.com/resource.validity.msg", priv_key, cert,
       "https://yourcdn.example.test/cert.cbor", &signers);
-  assert(success);
+  if (!success) {
+    abort();
+  }
   return signers;
 }
 

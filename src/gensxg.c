@@ -8,6 +8,7 @@
 #include <time.h>
 #include <unistd.h>
 
+#include <openssl/crypto.h>
 #include <openssl/pem.h>
 
 #include "libsxg.h"

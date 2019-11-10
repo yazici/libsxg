@@ -18,6 +18,7 @@
 
 #include <assert.h>
 #include <openssl/evp.h>
+#include <inttypes.h>
 #include <string.h>
 
 #include "libsxg/internal/sxg_buffer.h"
@@ -150,8 +151,15 @@ bool sxg_sig_generate_sig(const char* fallback_url, const sxg_buffer_t* header,
 
 static bool sxg_write_structured_header_binary(const sxg_buffer_t* binary,
                                                sxg_buffer_t* target) {
-  return sxg_write_byte('*', target) && sxg_base64encode(binary, target) &&
-         sxg_write_byte('*', target);
+  size_t base64_encoded_size = sxg_base64_size(binary->size);
+  if (!sxg_ensure_buffer_free_capacity(base64_encoded_size + 2, target)) {
+    return false;
+  }
+  sxg_write_byte('*', target);
+  sxg_base64encode(binary->data, binary->size, target->data + target->size);
+  target->size += base64_encoded_size;
+  sxg_write_byte('*', target);
+  return true;
 }
 
 static bool sxg_write_structured_header_string(const sxg_buffer_t* string,

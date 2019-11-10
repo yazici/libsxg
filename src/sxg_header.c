@@ -41,7 +41,7 @@ void sxg_header_release(sxg_header_t* target) {
   *target = sxg_empty_header();
 }
 
-static bool ensure_free_capacity(size_t desired_margin, sxg_header_t* target) {
+static bool sxg_ensure_header_free_capacity(size_t desired_margin, sxg_header_t* target) {
   return sxg_ensure_free_capacity_internal(target->size, desired_margin, 8,
                                            sizeof(sxg_kvp_t), &target->capacity,
                                            (void**)&target->entries);
@@ -75,7 +75,7 @@ static sxg_buffer_t* get_or_create_buffer(const char* key,
   }
 
   // When existing key is not found, create new entry in lowercase.
-  if (!ensure_free_capacity(1, target)) {
+  if (!sxg_ensure_header_free_capacity(1, target)) {
     return NULL;
   }
   char* const copied_key = OPENSSL_strdup(key);
@@ -108,7 +108,9 @@ bool sxg_header_append_integer(const char* key, uint64_t num,
   size_t nbytes =
       snprintf(integer_buffer, sizeof(integer_buffer), "%" PRIu64, num);
 
-  assert(nbytes + 1 <= sizeof(integer_buffer));
+  if (nbytes + 1 >= sizeof(integer_buffer)) {
+    return false;
+  }
 
   sxg_buffer_t* buf = get_or_create_buffer(key, target);
   return buf != NULL && sxg_write_string(integer_buffer, buf);
@@ -120,7 +122,7 @@ bool sxg_header_copy(const sxg_header_t* src, sxg_header_t* dst) {
     return true;
   }
   sxg_header_t tmp = sxg_empty_header();
-  if (!ensure_free_capacity(src->size, &tmp)) {
+  if (!sxg_ensure_header_free_capacity(src->size, &tmp)) {
     return false;
   }
 
@@ -205,7 +207,7 @@ bool sxg_write_cbor_map_header(size_t size, sxg_buffer_t* target) {
   // It writes cbor header for map.
   const size_t header_byte_size = sxg_cbor_map_header_serialized_size(size);
   const uint8_t prefix = sxg_cbor_map_header_prefix(size);
-  if (!ensure_buffer_free_capacity(header_byte_size, target)) {
+  if (!sxg_ensure_buffer_free_capacity(header_byte_size, target)) {
     return false;
   }
   uint8_t* buffer = target->data + target->size;

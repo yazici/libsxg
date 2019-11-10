@@ -60,7 +60,7 @@ bool sxg_ensure_free_capacity_internal(size_t size, size_t desired_margin,
   return true;
 }
 
-bool ensure_buffer_free_capacity(size_t desired_margin, sxg_buffer_t* target) {
+bool sxg_ensure_buffer_free_capacity(size_t desired_margin, sxg_buffer_t* target) {
   return sxg_ensure_free_capacity_internal(target->size, desired_margin, 1024,
                                            sizeof(uint8_t), &target->capacity,
                                            (void**)&target->data);
@@ -73,7 +73,7 @@ sxg_buffer_t sxg_empty_buffer() {
 
 bool sxg_buffer_resize(size_t size, sxg_buffer_t* target) {
   if (target->size < size &&
-      !ensure_buffer_free_capacity(size - target->size, target)) {
+      !sxg_ensure_buffer_free_capacity(size - target->size, target)) {
     return false;
   }
   target->size = size;
@@ -91,7 +91,7 @@ bool sxg_write_bytes(const uint8_t* bytes, size_t size, sxg_buffer_t* target) {
   if (size == 0) {
     return true;
   }
-  if (!ensure_buffer_free_capacity(size, target)) {
+  if (!sxg_ensure_buffer_free_capacity(size, target)) {
     return false;
   }
   memcpy(target->data + target->size, bytes, size);
@@ -104,7 +104,7 @@ bool sxg_write_buffer(const sxg_buffer_t* follower, sxg_buffer_t* target) {
 }
 
 bool sxg_write_byte(uint8_t byte, sxg_buffer_t* target) {
-  if (!ensure_buffer_free_capacity(1, target)) {
+  if (!sxg_ensure_buffer_free_capacity(1, target)) {
     return false;
   }
   target->data[target->size++] = byte;
@@ -146,7 +146,7 @@ uint8_t sxg_cbor_bytes_header_prefix(size_t size) {
 bool sxg_write_cbor_header(size_t length, sxg_buffer_t* target) {
   const size_t header_byte_size = sxg_cbor_bytes_header_serialized_size(length);
   const uint8_t prefix = sxg_cbor_bytes_header_prefix(length);
-  if (!ensure_buffer_free_capacity(header_byte_size, target)) {
+  if (!sxg_ensure_buffer_free_capacity(header_byte_size, target)) {
     return false;
   }
   sxg_serialize_int(prefix, 1, target->data);
@@ -158,7 +158,7 @@ bool sxg_write_cbor_header(size_t length, sxg_buffer_t* target) {
 bool sxg_write_bytes_cbor(const uint8_t* bytes, size_t length,
                           sxg_buffer_t* target) {
   const size_t header_byte_size = sxg_cbor_bytes_header_serialized_size(length);
-  if (!ensure_buffer_free_capacity(header_byte_size + length, target)) {
+  if (!sxg_ensure_buffer_free_capacity(header_byte_size + length, target)) {
     return false;
   }
   const uint8_t prefix = sxg_cbor_bytes_header_prefix(length);
@@ -180,7 +180,7 @@ void sxg_serialize_int(uint64_t num, int nbytes, uint8_t* dest) {
 bool sxg_write_int(uint64_t num, int nbytes, sxg_buffer_t* target) {
   assert(1 <= nbytes && nbytes <= 8);
 
-  if (!ensure_buffer_free_capacity(nbytes, target)) {
+  if (!sxg_ensure_buffer_free_capacity(nbytes, target)) {
     return false;
   }
   sxg_serialize_int(num, nbytes, target->data + target->size);
@@ -194,7 +194,7 @@ bool sxg_buffer_copy(const sxg_buffer_t* src, sxg_buffer_t* dst) {
     return true;
   }
   if (dst->size < src->size &&
-      !ensure_buffer_free_capacity(src->size - dst->size, dst)) {
+      !sxg_ensure_buffer_free_capacity(src->size - dst->size, dst)) {
     return false;
   }
   memcpy(dst->data, src->data, src->size);

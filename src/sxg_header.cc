@@ -91,7 +91,7 @@ size_t Header::GetCborSerializedSize() const {
   return header_size + body_size;
 }
 
-const size_t SerializeString(const std::string& str, uint8_t* target) {
+size_t SerializeString(const std::string& str, uint8_t* target) {
   const size_t header_size =
       sxg_cbor_bytes_header_serialized_size(str.size());
   const size_t prefix = sxg_cbor_bytes_header_prefix(str.size());

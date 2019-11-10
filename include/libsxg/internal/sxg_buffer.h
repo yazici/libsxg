@@ -30,7 +30,7 @@ bool sxg_ensure_free_capacity_internal(size_t size, size_t desired_margin,
                                        size_t item_size, size_t* capacity,
                                        void** buffer);
 
-bool ensure_buffer_free_capacity(size_t desired_margin, sxg_buffer_t* target);
+bool sxg_ensure_buffer_free_capacity(size_t desired_margin, sxg_buffer_t* target);
 
 // Appends an integer in big-endian format with nbytes. nbytes must be in the
 // range from 1 to 8. Returns true on success.

@@ -16,6 +16,7 @@
 
 #include "libsxg/sxg_encoded_response.h"
 
+#include "libsxg/internal/sxg_buffer.h"
 #include "libsxg/internal/sxg_codec.h"
 #include "libsxg/internal/sxg_header.h"
 
@@ -42,7 +43,9 @@ bool sxg_encode_response(const size_t mi_record_size,
                                &dst->header) &&
       sxg_header_append_string(":status", "200", &dst->header) &&
       sxg_write_string("mi-sha256-03=", &digest_value) &&
-      sxg_base64encode_bytes(digest, SHA256_DIGEST_LENGTH, &digest_value) &&
+      sxg_ensure_buffer_free_capacity(
+          sxg_base64_size(SHA256_DIGEST_LENGTH), &digest_value) &&
+      sxg_base64encode(digest, SHA256_DIGEST_LENGTH, digest_value.data) &&
       sxg_header_append_buffer("digest", &digest_value, &dst->header);
 
   sxg_buffer_release(&digest_value);
@@ -60,7 +63,9 @@ bool sxg_write_header_integrity(const sxg_encoded_response_t* src,
   const bool success = sxg_header_serialize_cbor(&src->header, &cbor) &&
                        sxg_calc_sha256(&cbor, &hashed) &&
                        sxg_write_string("sha256-", dst) &&
-                       sxg_base64encode(&hashed, dst);
+                       sxg_ensure_buffer_free_capacity(
+                           sxg_base64_size(hashed.size), dst) &&
+                       sxg_base64encode(hashed.data, hashed.size, dst->data);
 
   sxg_buffer_release(&cbor);
   sxg_buffer_release(&hashed);
