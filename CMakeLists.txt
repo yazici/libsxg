@@ -57,7 +57,7 @@ add_library(sxg
   src/sxg_generate.c
   src/sxg_raw_response.c
   src/sxg_encoded_response.c
-#  src/sxg_encoded_response.cc
+  src/sxg_encoded_response.cc
   src/sxg_header.c
   src/sxg_header.cc
   src/sxg_sig.c
@@ -175,15 +175,15 @@ endif ()
 set (SANITIZER_OPTIONS "-fsanitize=address,leak,undefined")
 macro (add_test_macro test_name use_sanitizer cpp_mode)
   set(target_name ${test_name})
-  if (use_sanitizer)
-    set(target_name ${target_name}_sanitizer)
+  if (${use_sanitizer})
+    set(target_name "${target_name}_sanitizer")
   endif ()
-  if (cpp_mode)
-    add_executable (${target_name}_cc tests/cpp/${test_name}.cc)
+  if (${cpp_mode})
+    set(target_name "${target_name}_cc")
+    add_executable (${target_name} tests/cpp/${test_name}.cc)
   else ()
     add_executable (${target_name} tests/${test_name}.cc)
   endif ()
-  add_executable (${target_name} tests/${test_name}.cc)
   add_test(
     NAME ${target_name}
     COMMAND ${target_name}
@@ -214,22 +214,14 @@ macro (add_test_macro test_name use_sanitizer cpp_mode)
   )
 endmacro ()
 
-function (add_plain_test test_name)
-  add_test_macro (${test_name} ${test_name})
-endfunction ()
-
-function (add_sanitizer_test test_name)
-  add_test_macro ("${test_name}_sanitizer" ${test_name})
-endfunction ()
-
 function (configure_test test_name cpp_mode)
-  if (cpp_mode)
+  if (${cpp_mode})
     message ("-- Configuring C++ test: ${test_name}")
   else ()
-    message ("-- Configuring test: ${test_name}")
+    message ("-- Configuring C test: ${test_name}")
   endif ()
-  add_plain_test (${test_name} ${cpp_mode})
-  add_sanitizer_test (${test_name} ${cpp_mode})
+  add_test_macro (${test_name} false ${cpp_mode})
+  add_test_macro (${test_name} true ${cpp_mode})
 endfunction ()
 
 if (NOT SKIP_TEST)
@@ -244,7 +236,7 @@ if (NOT SKIP_TEST)
   configure_test (nfail_malloc_test false)
 
   configure_test (sxg_header_test true)
-  #configure_test (sxg_encoded_response_test true)
+  configure_test (sxg_encoded_response_test true)
 endif ()
 
 

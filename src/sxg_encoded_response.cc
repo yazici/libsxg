@@ -14,17 +14,22 @@
 //
 ///////////////////////////////////////////////////////////////////////////////
 
+#include <cstring>
+#include <openssl/sha.h>
 #include "libsxg/sxg_raw_response.hpp"
 #include "libsxg/sxg_encoded_response.hpp"
 
 #include "libsxg/internal/sxg_codec.h"
-#include "libsxg/internal/sxg_header.h"
 
 namespace sxg {
 
+static const char* kIntegrityPrefix = "sha256-";
+
 EncodedResponse EncodedResponse::Encode(const size_t mi_record_size,
                                         const RawResponse& src) {
-  sxg_buffer_t digest_value = sxg_empty_buffer();
+  std::string digest_value;
+  digest_value.resize(sxg_base64encode_size(SHA256_DIGEST_LENGTH));
+
   uint8_t digest[SHA256_DIGEST_LENGTH];
   EncodedResponse result;
   result.header_ = src.header;
@@ -33,35 +38,35 @@ EncodedResponse EncodedResponse::Encode(const size_t mi_record_size,
   result.header_.Append("digest", "mi-sha256-03=");
 
   size_t encoded_size =
-      sxg_estimated_mi_sha256_size(src.payload.size, mi_record_size);
+    sxg_mi_sha256_size(src.payload.size(), mi_record_size);
   uint8_t proof[SHA256_DIGEST_LENGTH];
   result.payload_.resize(encoded_size);
-  sxg_encode_mi_sha256_write(src.payload.data, src.payload.size, mi_record_size,
-                             &result.payload_[0], proof);
-  result.Append("content-encoding", "mi-sha256-03");
-  sxg_write_string("mi-sha256-03=", &digest_value) &&
-      sxg_base64encode_bytes(digest, SHA256_DIGEST_LENGTH, &digest_value) &&
-      sxg_header_append_buffer("digest", &digest_value, &dst->header);
+  sxg_encode_mi_sha256(reinterpret_cast<const uint8_t*>(src.payload.data()),
+                       src.payload.length(), mi_record_size,
+                       reinterpret_cast<uint8_t*>(&result.payload_[0]), proof);
+  result.header_.Append("content-encoding", "mi-sha256-03");
 
-  sxg_buffer_release(&digest_value);
-  if (!success) {
-    sxg_encoded_response_release(dst);
-  }
-  return success;
+  sxg_base64encode(digest, SHA256_DIGEST_LENGTH,
+                   reinterpret_cast<uint8_t*>(&digest_value[0]));
+  result.header_.Append("digest", "mi-sha256-03=" + digest_value);
+
+  return result;
 }
+
 
 std::string EncodedResponse::GetHeaderIntegrity() const {
-  std::string result = header_.SerializeInCbor();
-  const bool success = sxg_header_serialize_cbor(&src->header, &cbor) &&
-                       sxg_calc_sha256(&cbor, &hashed) &&
-                       sxg_write_string("sha256-", dst) &&
-                       sxg_base64encode(&hashed, dst);
-  return success;
-}
+  std::string result;
+  result.resize(strlen(kIntegrityPrefix) + sxg_base64encode_size(SHA256_DIGEST_LENGTH));
+  uint8_t* pos = reinterpret_cast<uint8_t *>(&result[0]);
+  memcpy(pos, kIntegrityPrefix, strlen(kIntegrityPrefix));
+  pos += strlen(kIntegrityPrefix);
 
-void sxg_encoded_response_release(sxg_encoded_response_t* target) {
-  sxg_header_release(&target->header);
-  sxg_buffer_release(&target->payload);
+  std::string header_cbor = header_.SerializeInCbor();
+  uint8_t digest[SHA256_DIGEST_LENGTH];
+  SHA256(reinterpret_cast<const uint8_t *>(header_cbor.data()), header_cbor.size(), digest);
+  sxg_base64encode(digest, SHA256_DIGEST_LENGTH, pos);
+
+  return result;
 }
 
 }  // namespace sxg

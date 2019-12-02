@@ -62,7 +62,8 @@ TEST(SxgCodecTest, Sha384) {
 TEST(SxgCodecTest, Base64) {
   sxg_buffer_t input = StringToBuffer("hello");
   sxg_buffer_t base64 = sxg_empty_buffer();
-  sxg_base64encode(&input, &base64);
+  sxg_buffer_resize(sxg_base64encode_size(input.size), &base64);
+  sxg_base64encode(input.data, input.size, base64.data);
 
   EXPECT_EQ("aGVsbG8=", BufferToString(base64));
 
@@ -73,7 +74,8 @@ TEST(SxgCodecTest, Base64) {
 TEST(SxgCodecTest, Base64BreakLine) {
   sxg_buffer_t input = StringToBuffer("\n");
   sxg_buffer_t base64 = sxg_empty_buffer();
-  sxg_base64encode(&input, &base64);
+  sxg_buffer_resize(sxg_base64encode_size(input.size), &base64);
+  sxg_base64encode(input.data, input.size, base64.data);
 
   EXPECT_EQ("Cg==", BufferToString(base64));
 
@@ -92,7 +94,8 @@ TEST(SxgCodecTest, SHA256Base64) {
   std::string expected("dcRDgR2GM35DluAV13PzgnG6+pvQwPywfFvAu1UeFrs=");
 
   EXPECT_TRUE(sxg_calc_sha256(&input, &digest));
-  EXPECT_TRUE(sxg_base64encode(&digest, &base64_digest));
+  sxg_buffer_resize(sxg_base64encode_size(digest.size), &base64_digest);
+  EXPECT_TRUE(sxg_base64encode(digest.data, digest.size, base64_digest.data));
   EXPECT_EQ(expected, BufferToString(base64_digest));
 
   sxg_buffer_release(&digest);
@@ -109,9 +112,11 @@ TEST(SxgCodecTest, mi_sha_zero_length) {
   sxg_buffer_t base64 = sxg_empty_buffer();
   const std::string expected("bjQLnP+zepicpUTmu3gKLHiQHT+zNzh2hRGjBhevoB0=");
 
-  EXPECT_TRUE(sxg_encode_mi_sha256(&input, 256, &encoded, digest));
+  EXPECT_TRUE(sxg_buffer_resize(sxg_mi_sha256_size(input.size, 256), &encoded));
+  EXPECT_TRUE(sxg_encode_mi_sha256(input.data, input.size, 256, encoded.data, digest));
   EXPECT_EQ(0u, encoded.size);  // Must be 0-length.
-  EXPECT_TRUE(sxg_base64encode_bytes(digest, SHA256_DIGEST_LENGTH, &base64));
+  EXPECT_TRUE(sxg_buffer_resize(sxg_base64encode_size(SHA256_DIGEST_LENGTH), &base64));
+  EXPECT_TRUE(sxg_base64encode(digest, SHA256_DIGEST_LENGTH, base64.data));
   EXPECT_EQ(expected, BufferToString(base64));
 
   sxg_buffer_release(&base64);
@@ -134,8 +139,12 @@ TEST(SxgCodecTest, MiceOneChunk) {
       "When I grow up, I want to be a watermelon",
       49);
 
-  EXPECT_TRUE(sxg_encode_mi_sha256(&input, 255, &encoded, digest));
-  EXPECT_TRUE(sxg_base64encode_bytes(digest, SHA256_DIGEST_LENGTH, &base64));
+  EXPECT_TRUE(sxg_buffer_resize(sxg_mi_sha256_size(input.size, 255), &encoded));
+  EXPECT_TRUE(sxg_encode_mi_sha256(input.data, input.size, 255,
+                                   encoded.data, digest));
+  EXPECT_TRUE(sxg_buffer_resize(sxg_base64encode_size(SHA256_DIGEST_LENGTH),
+                                &base64));
+  EXPECT_TRUE(sxg_base64encode(digest, SHA256_DIGEST_LENGTH, base64.data));
   EXPECT_EQ(expected_digest, BufferToString(base64));
   EXPECT_EQ(expected_payload, BufferToString(encoded));
 
@@ -165,8 +174,10 @@ TEST(SxgCodecTest, MiceMultiChunks) {
       "atermelon",
       113);
 
-  EXPECT_TRUE(sxg_encode_mi_sha256(&input, 16, &encoded, digest));
-  EXPECT_TRUE(sxg_base64encode_bytes(digest, SHA256_DIGEST_LENGTH, &base64));
+  EXPECT_TRUE(sxg_buffer_resize(sxg_mi_sha256_size(input.size, 16), &encoded));
+  EXPECT_TRUE(sxg_encode_mi_sha256(input.data, input.size, 16, encoded.data, digest));
+  EXPECT_TRUE(sxg_buffer_resize(sxg_base64encode_size(SHA256_DIGEST_LENGTH), &base64));
+  EXPECT_TRUE(sxg_base64encode(digest, SHA256_DIGEST_LENGTH, base64.data));
   EXPECT_EQ(expected_digest, BufferToString(base64));
   EXPECT_EQ(expected_payload, BufferToString(encoded));
 

@@ -47,7 +47,7 @@ bool sxg_calc_sha384(const sxg_buffer_t* src, sxg_buffer_t* dst) {
          sxg_sha384(src->data, src->size, dst->data);
 }
 
-size_t sxg_base64_size(const size_t size) {
+size_t sxg_base64encode_size(const size_t size) {
   return 4 * ((size + 2) / 3);
 }
 
@@ -96,8 +96,8 @@ size_t sxg_mi_sha256_size(size_t length, uint64_t record_size) {
   }
 }
 
-size_t sxg_mi_sha256_remainder_size(size_t size,
-                                              uint64_t record_size) {
+static size_t sxg_mi_sha256_remainder_size(size_t size,
+                                    uint64_t record_size) {
   // If contents size == 0 chunk length must be 0.
   if (size == 0) {
     return 0;
@@ -110,8 +110,8 @@ size_t sxg_mi_sha256_remainder_size(size_t size,
   }
 }
 
-bool sxg_encode_mi_sha256(const sxg_buffer_t* src, uint64_t record_size,
-                          sxg_buffer_t* encoded,
+bool sxg_encode_mi_sha256(const uint8_t* src, size_t length,
+                          uint64_t record_size, uint8_t* encoded,
                           uint8_t proof[SHA256_DIGEST_LENGTH]) {
   // See 2 of https://tools.ietf.org/html/draft-thomson-http-mice-03
   // proof(r[i]) = SHA-256(r[i] || proof(r[i+1]) || 0x1)
@@ -123,21 +123,16 @@ bool sxg_encode_mi_sha256(const sxg_buffer_t* src, uint64_t record_size,
     return false;  // Avoid devision by zero.
   }
 
-  const size_t encoded_size = sxg_mi_sha256_size(src->size, record_size);
-  if (!sxg_buffer_resize(encoded_size, encoded)) {
-    return false;
-  }
-  encoded->size = encoded_size;
+  const size_t encoded_size = sxg_mi_sha256_size(length, record_size);
 
   // Construct encoded buffer from tail to head of source buffer.
-  const uint8_t* input_p = src->data + src->size;
-  uint8_t* output_p = encoded->data + encoded_size;
+  const uint8_t* input_p = src + length;
+  uint8_t* output_p = encoded + encoded_size;
   const size_t remainder =
-    sxg_mi_sha256_remainder_size(src->size, record_size);
+    sxg_mi_sha256_remainder_size(length, record_size);
 
   sxg_buffer_t workspace = sxg_empty_buffer();
   if (!sxg_buffer_resize(remainder + 1, &workspace)) {
-    sxg_buffer_release(encoded);
     return false;
   }
 
@@ -152,17 +147,17 @@ bool sxg_encode_mi_sha256(const sxg_buffer_t* src, uint64_t record_size,
   }
 
   // Remainder buffer length can be devided by record_size.
-  assert((input_p - src->data) % record_size == 0);
+  assert((input_p - src) % record_size == 0);
 
   if (!sxg_calc_sha256_bytes(&workspace, proof)) {
     goto failure;
   }
 
-  if (input_p == src->data) {
+  if (input_p == src) {
     // When one chunk contains whole buffer.
     sxg_buffer_release(&workspace);
-    if (src->size != 0) {
-      encode_uint64_to_buffer(record_size, encoded->data);
+    if (length != 0) {
+      encode_uint64_to_buffer(record_size, encoded);
     }
     return true;
   }
@@ -190,7 +185,7 @@ bool sxg_encode_mi_sha256(const sxg_buffer_t* src, uint64_t record_size,
     if (!sxg_calc_sha256_bytes(&workspace, proof)) {
       goto failure;
     }
-    if (input_p == src->data) {  // Reaches head of buffer
+    if (input_p == src) {  // Reaches head of buffer
       break;
     }
 
@@ -203,15 +198,14 @@ bool sxg_encode_mi_sha256(const sxg_buffer_t* src, uint64_t record_size,
   sxg_buffer_release(&workspace);
 
   // Capacity for storing RecordSize must be remaining.
-  assert(encoded->data + sizeof(record_size) == output_p);
+  assert(encoded + sizeof(record_size) == output_p);
 
   // Store RecordSize head 8 bytes of encoded data.
-  encode_uint64_to_buffer(record_size, encoded->data);
+  encode_uint64_to_buffer(record_size, encoded);
   return true;
 
 failure:
   sxg_buffer_release(&workspace);
-  sxg_buffer_release(encoded);
   return false;
 }
 

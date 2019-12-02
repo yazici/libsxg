@@ -27,12 +27,15 @@
 extern "C" {
 #endif
 
+bool sxg_sha256(const uint8_t* data, size_t size, uint8_t* out);
+bool sxg_sha384(const uint8_t* data, size_t size, uint8_t* out);
+
 // Replaces contents of `dst` with SHA-hash of `src`. Returns true on success.
 bool sxg_calc_sha256(const sxg_buffer_t* src, sxg_buffer_t* dst);
 bool sxg_calc_sha384(const sxg_buffer_t* src, sxg_buffer_t* dst);
 
 // Returns size of expected buffer length to input size.
-size_t sxg_base64_size(const size_t size);
+size_t sxg_base64encode_size(const size_t size);
 
 // Write base64 of `src` to `dst`. Returns true on success.
 bool sxg_base64encode(const uint8_t* src, size_t length, uint8_t* target);
@@ -40,16 +43,10 @@ bool sxg_base64encode(const uint8_t* src, size_t length, uint8_t* target);
 size_t sxg_mi_sha256_size(const size_t length,
                           const uint64_t record_size);
 
-size_t sxg_mi_sha256_remainder_size(size_t size,
-                                              uint64_t record_size);
-
-void sxg_encode_mi_sha256_write(const char* src, size_t size,
-                                uint64_t record_size, char* dst, char* proof);
-
 // Replaces `encoded` and `proof` with Merkle Integrity Content Encoding(MICE)
 // of `src`. Returns true on success.
-bool sxg_encode_mi_sha256(const sxg_buffer_t* src, uint64_t record_size,
-                          sxg_buffer_t* encoded,
+bool sxg_encode_mi_sha256(const uint8_t* src, size_t length,
+                          uint64_t record_size, uint8_t* encoded,
                           uint8_t proof[SHA256_DIGEST_LENGTH]);
 
 // Replaces `dst` with SHA256 of `cert`. Returns true on success.

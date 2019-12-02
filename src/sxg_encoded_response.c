@@ -16,6 +16,8 @@
 
 #include "libsxg/sxg_encoded_response.h"
 
+#include <string.h>
+
 #include "libsxg/internal/sxg_buffer.h"
 #include "libsxg/internal/sxg_codec.h"
 #include "libsxg/internal/sxg_header.h"
@@ -31,22 +33,31 @@ sxg_encoded_response_t sxg_empty_encoded_response() {
 bool sxg_encode_response(const size_t mi_record_size,
                          const sxg_raw_response_t* src,
                          sxg_encoded_response_t* dst) {
+  static const char* kMiSha256Prefix = "mi-sha256-03=";
   sxg_buffer_t digest_value = sxg_empty_buffer();
   uint8_t digest[SHA256_DIGEST_LENGTH];
   sxg_encoded_response_release(dst);
 
   bool success =
       sxg_header_copy(&src->header, &dst->header) &&
-      sxg_encode_mi_sha256(&src->payload, mi_record_size, &dst->payload,
+      sxg_buffer_resize(sxg_mi_sha256_size(src->payload.size, mi_record_size),
+                        &dst->payload) &&
+      sxg_encode_mi_sha256(src->payload.data, src->payload.size,
+                           mi_record_size, dst->payload.data,
                            digest) &&
       sxg_header_append_string("content-encoding", "mi-sha256-03",
                                &dst->header) &&
       sxg_header_append_string(":status", "200", &dst->header) &&
-      sxg_write_string("mi-sha256-03=", &digest_value) &&
-      sxg_ensure_buffer_free_capacity(
-          sxg_base64_size(SHA256_DIGEST_LENGTH), &digest_value) &&
-      sxg_base64encode(digest, SHA256_DIGEST_LENGTH, digest_value.data) &&
-      sxg_header_append_buffer("digest", &digest_value, &dst->header);
+      sxg_buffer_resize(strlen(kMiSha256Prefix) +
+                            sxg_base64encode_size(SHA256_DIGEST_LENGTH),
+                        &digest_value);
+
+  memcpy(digest_value.data, kMiSha256Prefix, strlen(kMiSha256Prefix));
+
+  success = success &&
+    sxg_base64encode(digest, SHA256_DIGEST_LENGTH,
+                     digest_value.data + strlen(kMiSha256Prefix)) &&
+    sxg_header_append_buffer("digest", &digest_value, &dst->header);
 
   sxg_buffer_release(&digest_value);
   if (!success) {
@@ -57,15 +68,19 @@ bool sxg_encode_response(const size_t mi_record_size,
 
 bool sxg_write_header_integrity(const sxg_encoded_response_t* src,
                                 sxg_buffer_t* dst) {
+  static const char* kIntegrityPrefix = "sha256-";
   sxg_buffer_t cbor = sxg_empty_buffer();
   sxg_buffer_t hashed = sxg_empty_buffer();
 
-  const bool success = sxg_header_serialize_cbor(&src->header, &cbor) &&
-                       sxg_calc_sha256(&cbor, &hashed) &&
-                       sxg_write_string("sha256-", dst) &&
-                       sxg_ensure_buffer_free_capacity(
-                           sxg_base64_size(hashed.size), dst) &&
-                       sxg_base64encode(hashed.data, hashed.size, dst->data);
+  const bool success =
+    sxg_header_serialize_cbor(&src->header, &cbor) &&
+    sxg_calc_sha256(&cbor, &hashed) &&
+    sxg_write_string(kIntegrityPrefix, dst) &&
+    sxg_buffer_resize(strlen(kIntegrityPrefix) +
+                      sxg_base64encode_size(hashed.size), dst);
+
+  memcpy(dst->data, kIntegrityPrefix, strlen(kIntegrityPrefix));
+  sxg_base64encode(hashed.data, hashed.size, dst->data + strlen(kIntegrityPrefix));
 
   sxg_buffer_release(&cbor);
   sxg_buffer_release(&hashed);

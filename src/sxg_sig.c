@@ -151,7 +151,7 @@ bool sxg_sig_generate_sig(const char* fallback_url, const sxg_buffer_t* header,
 
 static bool sxg_write_structured_header_binary(const sxg_buffer_t* binary,
                                                sxg_buffer_t* target) {
-  size_t base64_encoded_size = sxg_base64_size(binary->size);
+  size_t base64_encoded_size = sxg_base64encode_size(binary->size);
   if (!sxg_ensure_buffer_free_capacity(base64_encoded_size + 2, target)) {
     return false;
   }
