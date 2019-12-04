@@ -55,6 +55,7 @@ add_library(sxg
   src/sxg_buffer_debug.c
   src/sxg_codec.c
   src/sxg_generate.c
+  src/sxg_generate.cc
   src/sxg_raw_response.c
   src/sxg_encoded_response.c
   src/sxg_encoded_response.cc
@@ -62,6 +63,7 @@ add_library(sxg
   src/sxg_header.cc
   src/sxg_sig.c
   src/sxg_signer_list.c
+  src/sxg_signer_list.cc
 )
 
 target_include_directories(
@@ -237,6 +239,7 @@ if (NOT SKIP_TEST)
 
   configure_test (sxg_header_test true)
   configure_test (sxg_encoded_response_test true)
+  configure_test (sxg_generate_test true)
 endif ()
 
 

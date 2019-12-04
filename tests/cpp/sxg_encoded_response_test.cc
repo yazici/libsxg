@@ -44,7 +44,7 @@ TEST(SxgEncodedResponse, EncodeMinimum) {
   EXPECT_EQ(3u, encoded.HeaderSize());
   EXPECT_EQ(1u, encoded.GetHeader().Get(":status").size());
   EXPECT_EQ("200", encoded.GetHeader().Get(":status")[0]);
-  EXPECT_EQ(1u, encoded.GetHeader().Get("content-encoded").size());
+  EXPECT_EQ(1u, encoded.GetHeader().Get("content-encoding").size());
   EXPECT_EQ("mi-sha256-03", encoded.GetHeader().Get("content-encoding")[0]);
   EXPECT_EQ(1u, encoded.GetHeader().Get("digest").size());
   EXPECT_EQ(expected_digest, encoded.GetHeader().Get("digest")[0]);

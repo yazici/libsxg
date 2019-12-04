@@ -18,6 +18,9 @@
 #define LIBSXG_SXG_ENCODED_RESPONSE_HPP_
 
 #include <cstddef>
+#include <string>
+
+#include "libsxg/sxg_raw_response.hpp"
 
 namespace sxg {
 

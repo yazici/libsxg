@@ -52,14 +52,17 @@ bool sxg_encode_response(const size_t mi_record_size,
                             sxg_base64encode_size(SHA256_DIGEST_LENGTH),
                         &digest_value);
 
-  memcpy(digest_value.data, kMiSha256Prefix, strlen(kMiSha256Prefix));
+  if (success) {
+    memcpy(digest_value.data, kMiSha256Prefix, strlen(kMiSha256Prefix));
+  }
 
   success = success &&
-    sxg_base64encode(digest, SHA256_DIGEST_LENGTH,
-                     digest_value.data + strlen(kMiSha256Prefix)) &&
-    sxg_header_append_buffer("digest", &digest_value, &dst->header);
+      sxg_base64encode(digest, SHA256_DIGEST_LENGTH,
+                       digest_value.data + strlen(kMiSha256Prefix)) &&
+      sxg_header_append_buffer("digest", &digest_value, &dst->header);
 
   sxg_buffer_release(&digest_value);
+
   if (!success) {
     sxg_encoded_response_release(dst);
   }
@@ -72,15 +75,17 @@ bool sxg_write_header_integrity(const sxg_encoded_response_t* src,
   sxg_buffer_t cbor = sxg_empty_buffer();
   sxg_buffer_t hashed = sxg_empty_buffer();
 
-  const bool success =
+  bool success =
     sxg_header_serialize_cbor(&src->header, &cbor) &&
     sxg_calc_sha256(&cbor, &hashed) &&
-    sxg_write_string(kIntegrityPrefix, dst) &&
     sxg_buffer_resize(strlen(kIntegrityPrefix) +
                       sxg_base64encode_size(hashed.size), dst);
 
-  memcpy(dst->data, kIntegrityPrefix, strlen(kIntegrityPrefix));
-  sxg_base64encode(hashed.data, hashed.size, dst->data + strlen(kIntegrityPrefix));
+  if (success) {
+    memcpy(dst->data, kIntegrityPrefix, strlen(kIntegrityPrefix));
+  }
+  success = success && sxg_base64encode(hashed.data, hashed.size,
+                                        dst->data + strlen(kIntegrityPrefix));
 
   sxg_buffer_release(&cbor);
   sxg_buffer_release(&hashed);

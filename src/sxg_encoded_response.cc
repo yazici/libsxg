@@ -27,28 +27,24 @@ static const char* kIntegrityPrefix = "sha256-";
 
 EncodedResponse EncodedResponse::Encode(const size_t mi_record_size,
                                         const RawResponse& src) {
-  std::string digest_value;
-  digest_value.resize(sxg_base64encode_size(SHA256_DIGEST_LENGTH));
-
   uint8_t digest[SHA256_DIGEST_LENGTH];
   EncodedResponse result;
   result.header_ = src.header;
-  result.header_.Append("content-encoding", "mi-sha-256-03");
+  result.header_.Append("content-encoding", "mi-sha256-03");
   result.header_.Append(":status", "200");
-  result.header_.Append("digest", "mi-sha256-03=");
 
   size_t encoded_size =
     sxg_mi_sha256_size(src.payload.size(), mi_record_size);
-  uint8_t proof[SHA256_DIGEST_LENGTH];
   result.payload_.resize(encoded_size);
   sxg_encode_mi_sha256(reinterpret_cast<const uint8_t*>(src.payload.data()),
                        src.payload.length(), mi_record_size,
-                       reinterpret_cast<uint8_t*>(&result.payload_[0]), proof);
-  result.header_.Append("content-encoding", "mi-sha256-03");
+                       reinterpret_cast<uint8_t*>(&result.payload_[0]), digest);
 
+  std::string digest_base64;
+  digest_base64.resize(sxg_base64encode_size(SHA256_DIGEST_LENGTH));
   sxg_base64encode(digest, SHA256_DIGEST_LENGTH,
-                   reinterpret_cast<uint8_t*>(&digest_value[0]));
-  result.header_.Append("digest", "mi-sha256-03=" + digest_value);
+                   reinterpret_cast<uint8_t*>(&digest_base64[0]));
+  result.header_.Append("digest", "mi-sha256-03=" + digest_base64);
 
   return result;
 }

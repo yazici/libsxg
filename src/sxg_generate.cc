@@ -14,21 +14,16 @@
 //
 ///////////////////////////////////////////////////////////////////////////////
 
-#ifndef LIBSXG_SXG_GENERATE_HPP_
-#define LIBSXG_SXG_GENERATE_HPP_
-
 #include <stdbool.h>
 
-#include "libsxg/sxg_encoded_response.hpp"
-#include "libsxg/sxg_raw_response.hpp"
-#include "libsxg/sxg_signer_list.hpp"
+#include "libsxg/sxg_generate.hpp"
 
 namespace sxg {
 
 // Return SXG payload.
 std::string Generate(const std::string& fallback_url, const SignerList& signers,
-                     const EncodedResponse& resp);
+                     const EncodedResponse& resp) {
+  
+}
 
 }  // namespace sxg
-
-#endif  // LIBSXG_SXG_GENERATE_HPP_
