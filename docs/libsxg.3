@@ -1,0 +1,64 @@
+.TH libsxg 3 "December 2019"
+.SH NAME
+libsxg \- Signed HTTP Exchange (SXG) toolkit
+.SH DESCRIPTION
+All specifications implemented in this library follow this draft \fI\%https://tools\.ietf\.org/html/draft\-yasskin\-http\-origin\-signed\-responses\-06\fR\. An SXG file consists of several parts\. First part is \fBrequest URL\fR which represents the URL where the SXG payload is served\. The other essential parts are \fBSignature\fR and \fBPayload\fR described below\.
+.SS "Signature"
+\fBSignature\fR part contains the signature and several parameters encoded with Structured Headers \fI\%https://tools\.ietf\.org/html/draft\-ietf\-httpbis\-header\-structure\-10\fR\. The parameters are below\.
+.IP "\(bu" 4
+\fBintegrity\fR: Calculated checksum from MICE encoded HTTP payload\.
+.IP "\(bu" 4
+\fBvalidity\-url\fR: A URL for validity information, it must be https and have the same origin as fallback\-url\.
+.IP "\(bu" 4
+\fBdate\fR: An Unix time when this signature\'s validity window starts\.
+.IP "\(bu" 4
+\fBexpires\fR: A Unix time when the signature expires\.
+.IP "\(bu" 4
+\fBcert\-url\fR: An URL containing the certificate for the signature\. Any origin can serve the certificate\.
+.IP "\(bu" 4
+\fBcert\-sha256\fR: An SHA\-256 message digest of the certificate for this signature\.
+.IP "\(bu" 4
+\fBed25519key\fR: A public key for the signature, it is required if signing key type is \fBEd25519\fR and this parameter is mutually exclusive with \fBcert\-url\fR and \fBcert\-sha256\fR\.
+.IP "\(bu" 4
+\fBsig\fR: Signature made by private key using request URL, \fBcert\-sha256\fR, \fBvalidity\-url\fR, \fBdate\fR, \fBexpires\fR and serialized HTTP response header\.
+.IP "" 0
+.P
+You can embed multiple signatures in a single SXG file\. Using multiple signatures gives you the flexibility of expiration or ways to obtain certificates\. You can configure the signers by \fBsxg_signer_list_t\fR related functions \fI\%sxg_signer_list\.md\fR\.
+.SS "Payload"
+\fBPayload\fR is a pair of HTTP header and body\. HTTP header is serialized using CBOR encoding \fI\%https://tools\.ietf\.org/html/rfc7049\fR\. Header must include \fBDigest\fR which is calculated from the body, \fBContent\-Type\fR and \fBstatus\fR\. The body must be encoded with mi\-sha256 \fI\%https://tools\.ietf\.org/html/draft\-thomson\-http\-mice\-03\fR to keep integrity of contents\. You can create the encoded payload by sxg_raw_response_t \fI\%sxg_raw_response\.md\fR and sxg_encoded_response_t \fI\%sxg_encoded_response\.md\fR and \fBsxg_encode_response\fR function\.
+.SH Generating SXG
+These steps describe how to use the library to make an SXG file\.
+.IP "1." 4
+Get HTTP response of your website to be signed\.
+.IP "2." 4
+Fill the response data into \fBsxg_raw_response_t\fR struct\.
+.IP "3." 4
+Call \fBsxg_encode_response()\fR function with your filled \fBsxg_raw_response_t\fR and produce \fBsxg_encoded_response_t\fR\.
+.IP "4." 4
+Prepare ECDSA key pair with certificate containing \fBCanSignHttpExchanges\fR extension\.
+.IP "5." 4
+Register the key pair and parameters as a signer in \fBsxg_signer_list_t\fR struct\.
+.IP "6." 4
+Call sxg_generate function to get SXG payload\.
+
+.P
+It should be initialized with \fBsxg_empty_buffer()\fR, otherwise you will touch uninitialized memory\. The memory space is not initially allocated\. The memory will be allocated on the first resize or write invocation and expanded as needed\. You must release memory via \fBsxg_buffer_release()\fR\.
+.P
+Memory is allocated via OPENSSL_malloc \fI\%https://www\.openssl\.org/docs/man1\.1\.1/man3/OPENSSL_malloc\.html\fR, so you can change memory allocating functions by \fBCRYPTO_set_mem_functions\fR\.
+.P
+If you want to use \fBsxg_buffer_t\fR only, add \fBinclude\fR like
+.IP "" 4
+.nf
+#include <libsxg/sxg_buffer\.h>
+.fi
+.IP "" 0
+.P
+But in most cases, we recommend to include master header of this project like
+.IP "" 4
+.nf
+#include <libsxg\.h>
+.fi
+
+.SH Further documents
+
+You can read libsxg full documentation online https://google.github.io/libsxg/
